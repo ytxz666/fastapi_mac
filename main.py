@@ -2,7 +2,6 @@ from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.templating import Jinja2Templates
 import os
-import time
 
 # 初始化FastAPI应用
 app = FastAPI(title="微信公众号管理系统", description="基于FastAPI开发的微信公众号管理系统", version="1.0.0")
@@ -34,7 +33,7 @@ def read_root(request: Request):
 from services.message_service import MessageService
 
 # 微信消息接收端点
-@app.post("/wechat")
+@app.post("/wechat", response_class=HTMLResponse)
 async def handle_wechat_message(request: Request):
     # 读取请求体中的XML数据
     xml_data = await request.body()
@@ -60,13 +59,12 @@ async def handle_wechat_message(request: Request):
             """.format(
                 to_user=message["FromUserName"],
                 from_user=message["ToUserName"],
-                create_time=int(time.time()),
                 content="感谢您的留言！我们会尽快回复您。"  # 可自定义回复内容
             )
-            return Response(content=reply_xml.strip(), media_type="application/xml")
+            return reply_xml.strip()
 
     # 默认回复（微信要求必须返回success，否则会重试）
-    return Response(content="success", media_type="text/plain")
+    return "success"
 
 from services.push_service import PushService
 from pydantic import BaseModel
