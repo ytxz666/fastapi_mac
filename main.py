@@ -37,34 +37,46 @@ from services.message_service import MessageService
 # 微信消息接收端点
 @app.post("/wechat", response_class=HTMLResponse)
 async def handle_wechat_message(request: Request):
-    # 读取请求体中的XML数据
-    xml_data = await request.body()
-    xml_str = xml_data.decode("utf-8")
+    try:
+        logger.info("接收到微信消息请求")
+        # 读取请求体中的XML数据
+        xml_data = await request.body()
+        xml_str = xml_data.decode("utf-8")
+        logger.info(f"接收到XML消息数据，长度: {len(xml_str)} 字符")
 
-    # 解析XML消息
-    message = MessageService.parse_xml_message(xml_str)
-    if message:
-        # 保存消息到Excel
-        MessageService.save_message_to_excel(message)
+        # 解析XML消息
+        message = MessageService.parse_xml_message(xml_str)
+        if message:
+            logger.info(f"成功解析消息，消息类型: {message.get('msg_type')}，消息ID: {message.get('msg_id')}")
+            # 保存消息到Excel
+            save_result = MessageService.save_message_to_excel(message)
+            logger.info(f"消息保存结果: {save_result}")
 
-        # 文本消息自动回复
-        if message.get("msg_type") == "text":
-            # 构建回复XML
-            to_user=message["from_user_name"]
-            from_user=message["to_user_name"]
-            content="感谢您的留言！我们会尽快回复您。"  # 可自定义回复内容
-            create_time = int(time.time())
-            reply_xml = f"""
-            <xml>
-                <ToUserName><![CDATA[{to_user}]]></ToUserName>
-                <FromUserName><![CDATA[{from_user}]]></FromUserName>
-                <CreateTime>{create_time}</CreateTime>
-                <MsgType><![CDATA[text]]></MsgType>
-                <Content><![CDATA[{content}]]></Content>
-            </xml>
-            """
-            return reply_xml
+            # 文本消息自动回复
+            if message.get("msg_type") == "text":
+                logger.info(f"准备回复文本消息给用户: {message.get('from_user_name')}")
+                # 构建回复XML
+                to_user=message["from_user_name"]
+                from_user=message["to_user_name"]
+                content="感谢您的留言！我们会尽快回复您。"  # 可自定义回复内容
+                create_time = int(time.time())
+                reply_xml = f"""
+                <xml>
+                    <ToUserName><![CDATA[{to_user}]]></ToUserName>
+                    <FromUserName><![CDATA[{from_user}]]></FromUserName>
+                    <CreateTime>{create_time}</CreateTime>
+                    <MsgType><![CDATA[text]]></MsgType>
+                    <Content><![CDATA[{content}]]></Content>
+                </xml>
+                """
+                logger.info("回复消息已生成")
+                return reply_xml
+        else:
+            logger.warning("无法解析XML消息")
 
+    except Exception as e:
+        logger.error(f"处理微信消息时发生错误: {str(e)}", exc_info=True)
+    
     # 默认回复（微信要求必须返回success，否则会重试）
     return "success"
 
@@ -96,6 +108,12 @@ def push_message(request: PushRequest):
     else:
         return {"status": "error", "message": message}
 
+import logging
+
+# 配置日志
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
+
 # 消息记录查看接口
 @app.get("/api/messages")
 def get_messages():
@@ -103,8 +121,14 @@ def get_messages():
     获取所有消息记录
     :return: 消息记录列表
     """
-    messages = MessageService.get_all_messages()
-    return {"status": "success", "messages": messages}
+    try:
+        logger.info("接收到获取消息记录的请求")
+        messages = MessageService.get_all_messages()
+        logger.info(f"获取到 {len(messages)} 条消息记录")
+        return {"status": "success", "messages": messages}
+    except Exception as e:
+        logger.error(f"获取消息记录时发生错误: {str(e)}", exc_info=True)
+        return {"status": "error", "message": "获取消息记录失败", "messages": []}
 
 if __name__ == "__main__":
     import uvicorn

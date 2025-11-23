@@ -3,11 +3,23 @@ from datetime import datetime
 from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Alignment
 import os
+import logging
 
 from typing import Dict, Any, Optional
 
-# 消息存储Excel文件路径
-EXCEL_FILE_PATH = os.path.join("data", "messages.xlsx")
+# 配置日志
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
+
+# 确保data目录存在
+data_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data")
+if not os.path.exists(data_dir):
+    os.makedirs(data_dir)
+    logger.info(f"创建数据目录: {data_dir}")
+
+# 消息存储Excel文件路径 - 使用绝对路径
+EXCEL_FILE_PATH = os.path.join(data_dir, "messages.xlsx")
+logger.info(f"Excel文件路径: {EXCEL_FILE_PATH}")
 
 class MessageService:
     
@@ -93,8 +105,11 @@ class MessageService:
         :return: 保存结果 (True/False)
         """
         try:
+            logger.info(f"开始保存消息到Excel，消息ID: {message.get('msg_id', '未知')}")
+            
             # 检查文件是否存在，如果不存在则创建并添加表头
             if not os.path.exists(EXCEL_FILE_PATH):
+                logger.info(f"Excel文件不存在，创建新文件: {EXCEL_FILE_PATH}")
                 workbook = Workbook()
                 sheet = workbook.active
                 sheet.title = "消息记录"
@@ -110,8 +125,10 @@ class MessageService:
                     for cell in col:
                         cell.alignment = Alignment(horizontal='center', vertical='center')
                 workbook.save(EXCEL_FILE_PATH)
+                logger.info("Excel文件创建成功")
 
             # 打开现有文件并追加数据
+            logger.info("打开Excel文件追加数据")
             workbook = load_workbook(EXCEL_FILE_PATH)
             sheet = workbook.active
 
@@ -132,9 +149,10 @@ class MessageService:
 
             sheet.append(row_data)
             workbook.save(EXCEL_FILE_PATH)
+            logger.info(f"消息保存成功，文件路径: {EXCEL_FILE_PATH}")
             return True
         except Exception as e:
-            print(f"保存消息到Excel失败: {str(e)}")
+            logger.error(f"保存消息到Excel失败: {str(e)}", exc_info=True)
             return False
 
     @staticmethod
@@ -144,15 +162,20 @@ class MessageService:
         :return: 消息记录列表
         """
         try:
+            logger.info("开始获取所有消息记录")
+            
             if not os.path.exists(EXCEL_FILE_PATH):
+                logger.info(f"Excel文件不存在: {EXCEL_FILE_PATH}")
                 return []
 
+            logger.info(f"打开Excel文件读取数据: {EXCEL_FILE_PATH}")
             workbook = load_workbook(EXCEL_FILE_PATH)
             sheet = workbook.active
             messages = []
 
             # 获取表头
             headers = [cell.value for cell in sheet[1]]
+            logger.info(f"获取表头成功: {headers}")
 
             # 遍历数据行
             for row in sheet.iter_rows(min_row=2, values_only=True):
@@ -161,7 +184,8 @@ class MessageService:
                     message_dict[header] = value
                 messages.append(message_dict)
 
+            logger.info(f"读取消息记录成功，共 {len(messages)} 条")
             return messages
         except Exception as e:
-            print(f"读取消息记录失败: {str(e)}")
+            logger.error(f"读取消息记录失败: {str(e)}", exc_info=True)
             return []
