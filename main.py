@@ -48,7 +48,7 @@ async def handle_wechat_message(request: Request):
         MessageService.save_message_to_excel(message)
 
         # 文本消息自动回复
-        if message.get("MsgType") == "text":
+        if message.get("msg_type") == "text":
             # 构建回复XML
             to_user=message["FromUserName"]
             from_user=message["ToUserName"]
