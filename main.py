@@ -1,8 +1,9 @@
-from fastapi import FastAPI, Request, Response
+from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.templating import Jinja2Templates
 import os
+import time
 
 # 初始化FastAPI应用
 app = FastAPI(title="微信公众号管理系统", description="基于FastAPI开发的微信公众号管理系统", version="1.0.0")
@@ -27,7 +28,7 @@ if not os.path.exists(DATA_DIR):
 from fastapi import Request
 
 # 根路由 - 渲染管理系统前端页面
-@app.get("/")
+@app.get("/", response_class=HTMLResponse)
 def read_root(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
 
@@ -49,6 +50,10 @@ async def handle_wechat_message(request: Request):
         # 文本消息自动回复
         if message.get("MsgType") == "text":
             # 构建回复XML
+            to_user=message["FromUserName"]
+            from_user=message["ToUserName"]
+            content="感谢您的留言！我们会尽快回复您。"  # 可自定义回复内容
+            create_time = int(time.time())
             reply_xml = f"""
             <xml>
                 <ToUserName><![CDATA[{to_user}]]></ToUserName>
@@ -57,11 +62,7 @@ async def handle_wechat_message(request: Request):
                 <MsgType><![CDATA[text]]></MsgType>
                 <Content><![CDATA[{content}]]></Content>
             </xml>
-            """.format(
-                to_user=message["FromUserName"],
-                from_user=message["ToUserName"],
-                content="感谢您的留言！我们会尽快回复您。"  # 可自定义回复内容
-            )
+            """
             return reply_xml.strip()
 
     # 默认回复（微信要求必须返回success，否则会重试）

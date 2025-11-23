@@ -4,55 +4,76 @@ from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Alignment
 import os
 
+from typing import Dict, Any, Optional
+
 # 消息存储Excel文件路径
 EXCEL_FILE_PATH = os.path.join("data", "messages.xlsx")
 
 class MessageService:
+    
     @staticmethod
-    def parse_xml_message(xml_data):
+    def parse_xml_message(xml_data: str) -> Optional[Dict[str, Any]]:
         """
-        解析微信公众号推送的XML格式消息
-        :param xml_data: XML格式的请求体字符串
-        :return: 解析后的消息字典
+        解析微信公众号推送的XML消息
+    
+        参数:
+         xml_data: XML格式的字符串数据
+        
+        返回:
+         Dict: 解析后的消息字典，包含关键字段
         """
         try:
+            # 解析XML数据
             root = ET.fromstring(xml_data)
+            
             # 提取基础消息字段
-            message = {
-                "ToUserName": root.findtext("ToUserName", ""),
-                "FromUserName": root.findtext("FromUserName", ""),
-                "CreateTime": root.findtext("CreateTime", ""),
-                "MsgType": root.findtext("MsgType", ""),
-                "MsgId": root.findtext("MsgId", "")
+            message_data = {
+                'to_user_name': root.find('ToUserName').text if root.find('ToUserName') is not None else '',
+                'from_user_name': root.find('FromUserName').text if root.find('FromUserName') is not None else '',
+                'create_time': root.find('CreateTime').text if root.find('CreateTime') is not None else '',
+                'msg_type': root.find('MsgType').text if root.find('MsgType') is not None else '',
+                'msg_id': root.find('MsgId').text if root.find('MsgId') is not None else '',
             }
-
-            # 根据消息类型提取特定字段
-            if message["MsgType"] == "text":
-                message["Content"] = root.findtext("Content", "")
-            elif message["MsgType"] == "image":
-                message["PicUrl"] = root.findtext("PicUrl", "")
-                message["MediaId"] = root.findtext("MediaId", "")
-            elif message["MsgType"] == "voice":
-                message["MediaId"] = root.findtext("MediaId", "")
-                message["Format"] = root.findtext("Format", "")
-            elif message["MsgType"] == "video":
-                message["MediaId"] = root.findtext("MediaId", "")
-                message["ThumbMediaId"] = root.findtext("ThumbMediaId", "")
-
-            # 转换创建时间为可读性更好的格式
-            if message["CreateTime"]:
-                try:
-                    timestamp = int(message["CreateTime"])
-                    message["CreateTimeFormatted"] = datetime.fromtimestamp(timestamp).strftime("%Y-%m-%d %H:%M:%S")
-                except Exception as e:
-                    message["CreateTimeFormatted"] = "Invalid time"
-            else:
-                message["CreateTimeFormatted"] = ""
-
-            return message
+            
+            # 根据消息类型提取特定内容
+            msg_type = message_data['msg_type']
+            
+            if msg_type == 'text':
+                # 文本消息
+                message_data['content'] = root.find('Content').text if root.find('Content') is not None else ''
+            elif msg_type == 'image':
+                # 图片消息
+                message_data['pic_url'] = root.find('PicUrl').text if root.find('PicUrl') is not None else ''
+                message_data['media_id'] = root.find('MediaId').text if root.find('MediaId') is not None else ''
+            elif msg_type == 'voice':
+                # 语音消息
+                message_data['media_id'] = root.find('MediaId').text if root.find('MediaId') is not None else ''
+                message_data['format'] = root.find('Format').text if root.find('Format') is not None else ''
+            elif msg_type == 'video' or msg_type == 'shortvideo':
+                # 视频消息
+                message_data['media_id'] = root.find('MediaId').text if root.find('MediaId') is not None else ''
+                message_data['thumb_media_id'] = root.find('ThumbMediaId').text if root.find('ThumbMediaId') is not None else ''
+            elif msg_type == 'location':
+                # 位置消息
+                message_data['location_x'] = root.find('Location_X').text if root.find('Location_X') is not None else ''
+                message_data['location_y'] = root.find('Location_Y').text if root.find('Location_Y') is not None else ''
+                message_data['scale'] = root.find('Scale').text if root.find('Scale') is not None else ''
+                message_data['label'] = root.find('Label').text if root.find('Label') is not None else ''
+            elif msg_type == 'link':
+                # 链接消息
+                message_data['title'] = root.find('Title').text if root.find('Title') is not None else ''
+                message_data['description'] = root.find('Description').text if root.find('Description') is not None else ''
+                message_data['url'] = root.find('Url').text if root.find('Url') is not None else ''
+            elif msg_type == 'event':
+                # 事件消息
+                message_data['event'] = root.find('Event').text if root.find('Event') is not None else ''
+                message_data['event_key'] = root.find('EventKey').text if root.find('EventKey') is not None else ''
+            
+            return message_data
+            
         except Exception as e:
-            print(f"解析XML消息失败: {str(e)}")
-            return {}
+            print(f"解析XML消息时出错: {e}")
+            return None
 
     @staticmethod
     def save_message_to_excel(message):
