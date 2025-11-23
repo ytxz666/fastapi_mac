@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>微信公众号管理系统</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        body {
+            background-color: #f5f5f5;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        header {
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .card {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        h2 {
+            color: #444;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #555;
+        }
+        input, textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        textarea {
+            height: 100px;
+            resize: vertical;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .message-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        .message-table th, .message-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+        .message-table th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+        }
+        .status-success {
+            color: green;
+        }
+        .status-error {
+            color: red;
+        }
+        .push-result {
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .loading {
+            color: #666;
+            text-align: center;
+            padding: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>微信公众号管理系统</h1>
+        </header>
+
+        <div class="card">
+            <h2>消息记录</h2>
+            <div id="message-container">
+                <div class="loading">加载消息中...</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>主动推送消息</h2>
+            <form id="push-form">
+                <div class="form-group">
+                    <label for="openid">用户OpenID:</label>
+                    <input type="text" id="openid" name="openid" required placeholder="输入用户的OpenID">
+                </div>
+                <div class="form-group">
+                    <label for="content">消息内容:</label>
+                    <textarea id="content" name="content" required placeholder="输入要推送的消息内容"></textarea>
+                </div>
+                <button type="submit">发送消息</button>
+                <div id="push-result" class="push-result"></div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // 页面加载时获取消息记录
+        document.addEventListener('DOMContentLoaded', function() {
+            fetchMessages();
+            setupPushForm();
+        });
+
+        // 获取消息记录并显示
+        function fetchMessages() {
+            fetch('/api/messages')
+                .then(response => response.json())
+                .then(data => {
+                    const container = document.getElementById('message-container');
+                    if (data.status === 'success' && data.messages.length > 0) {
+                        let tableHtml = '<table class="message-table">';
+                        tableHtml += '<tr>';
+                        // 添加表头
+                        Object.keys(data.messages[0]).forEach(key => {
+                            tableHtml += `<th>${key}</th>`;
+                        });
+                        tableHtml += '</tr>';
+                        // 添加数据行
+                        data.messages.forEach(message => {
+                            tableHtml += '<tr>';
+                            Object.values(message).forEach(value => {
+                                tableHtml += `<td>${value || ''}</td>`;
+                            });
+                            tableHtml += '</tr>';
+                        });
+                        tableHtml += '</table>';
+                        container.innerHTML = tableHtml;
+                    } else {
+                        container.innerHTML = '<p>暂无消息记录</p>';
+                    }
+                })
+                .catch(error => {
+                    console.error('获取消息失败:', error);
+                    document.getElementById('message-container').innerHTML = '<p class="status-error">获取消息失败，请刷新页面重试</p>';
+                });
+        }
+
+        // 设置推送表单提交事件
+        function setupPushForm() {
+            const form = document.getElementById('push-form');
+            const resultDiv = document.getElementById('push-result');
+
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                const openid = document.getElementById('openid').value;
+                const content = document.getElementById('content').value;
+
+                fetch('/api/push', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ openid, content })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        resultDiv.textContent = `推送成功: ${data.message}`;
+                        resultDiv.style.backgroundColor = '#d4edda';
+                        resultDiv.style.color = '#155724';
+                        form.reset();
+                        // 推送成功后刷新消息列表
+                        fetchMessages();
+                    } else {
+                        resultDiv.textContent = `推送失败: ${data.message}`;
+                        resultDiv.style.backgroundColor = '#f8d7da';
+                        resultDiv.style.color = '#721c24';
+                    }
+                })
+                .catch(error => {
+                    console.error('推送请求失败:', error);
+                    resultDiv.textContent = '推送请求失败，请重试';
+                    resultDiv.style.backgroundColor = '#f8d7da';
+                    resultDiv.style.color = '#721c24';
+                });
+            });
+        }
+    </script>
+</body>
+</html>
