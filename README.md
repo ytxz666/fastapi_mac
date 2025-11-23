@@ -15,7 +15,7 @@
 ### 前置条件
 - Python 3.9+ 
 - pip (Python包管理工具)
-- Docker (可选，用于容器化部署)
+- Docker (用于容器化部署)
 - 微信公众号账号(需获取AppID和AppSecret)
 
 ### 本地开发环境搭建
