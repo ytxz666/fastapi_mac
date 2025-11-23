@@ -34,41 +34,38 @@ def read_root(request: Request):
 from services.message_service import MessageService
 
 # 微信消息接收端点
-@app.post("/wechat")
+@app.post("/wechat", response_class=HTMLResponse)
 async def handle_wechat_message(request: Request):
-    try:
-        # 读取请求体中的XML数据
-        xml_data = await request.body()
-        xml_str = xml_data.decode("utf-8")
+    # 读取请求体中的XML数据
+    xml_data = await request.body()
+    xml_str = xml_data.decode("utf-8")
 
-        # 解析XML消息
-        message = MessageService.parse_xml_message(xml_str)
-        if message:
-            # 保存消息到Excel
-            MessageService.save_message_to_excel(message)
+    # 解析XML消息
+    message = MessageService.parse_xml_message(xml_str)
+    if message:
+        # 保存消息到Excel
+        MessageService.save_message_to_excel(message)
 
-            # 文本消息自动回复
-            if message.get("MsgType") == "text":
-                create_time = int(time.time())
-                # 构建回复XML
-                reply_xml = f"""
-                <xml>
-                    <ToUserName><![CDATA[{to_user}]]></ToUserName>
-                    <FromUserName><![CDATA[{from_user}]]></FromUserName>
-                    <CreateTime>{create_time}</CreateTime>
-                    <MsgType><![CDATA[text]]></MsgType>
-                    <Content><![CDATA[{content}]]></Content>
-                </xml>
-                """.format(
-                    to_user=message["FromUserName"],
-                    from_user=message["ToUserName"],
-                    content="感谢您的留言！我们会尽快回复您。"  # 可自定义回复内容
-                )
-                return reply_xml.strip()
-        return "success"
-    except Exception as e:
-        print(f"处理微信消息错误: {str(e)}")
-        return "success"
+        # 文本消息自动回复
+        if message.get("MsgType") == "text":
+            # 构建回复XML
+            reply_xml = f"""
+            <xml>
+                <ToUserName><![CDATA[{to_user}]]></ToUserName>
+                <FromUserName><![CDATA[{from_user}]]></FromUserName>
+                <CreateTime>{create_time}</CreateTime>
+                <MsgType><![CDATA[text]]></MsgType>
+                <Content><![CDATA[{content}]]></Content>
+            </xml>
+            """.format(
+                to_user=message["FromUserName"],
+                from_user=message["ToUserName"],
+                content="感谢您的留言！我们会尽快回复您。"  # 可自定义回复内容
+            )
+            return reply_xml.strip()
+
+    # 默认回复（微信要求必须返回success，否则会重试）
+    return "success"
 
 from services.push_service import PushService
 from pydantic import BaseModel
