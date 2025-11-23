@@ -63,7 +63,7 @@ async def handle_wechat_message(request: Request):
                 <Content><![CDATA[{content}]]></Content>
             </xml>
             """
-            return reply_xml.strip()
+            return reply_xml
 
     # 默认回复（微信要求必须返回success，否则会重试）
     return "success"

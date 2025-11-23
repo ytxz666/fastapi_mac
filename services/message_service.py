@@ -35,6 +35,16 @@ class MessageService:
                 'msg_id': root.find('MsgId').text if root.find('MsgId') is not None else '',
             }
             
+            # 添加格式化时间字段
+            if message_data['create_time']:
+                try:
+                    timestamp = int(message_data['create_time'])
+                    message_data['create_time_formatted'] = datetime.fromtimestamp(timestamp).strftime("%Y-%m-%d %H:%M:%S")
+                except Exception as e:
+                    message_data['create_time_formatted'] = "Invalid time"
+            else:
+                message_data['create_time_formatted'] = ""
+            
             # 根据消息类型提取特定内容
             msg_type = message_data['msg_type']
             
@@ -105,19 +115,19 @@ class MessageService:
             workbook = load_workbook(EXCEL_FILE_PATH)
             sheet = workbook.active
 
-            # 准备要写入的数据行
+            # 准备要写入的数据行 - 使用与parse_xml_message一致的字段名
             row_data = [
-                message.get("MsgId", ""),
-                message.get("CreateTime", ""),
-                message.get("CreateTimeFormatted", ""),
-                message.get("MsgType", ""),
-                message.get("FromUserName", ""),
-                message.get("ToUserName", ""),
-                message.get("Content", ""),
-                message.get("PicUrl", ""),
-                message.get("MediaId", ""),
-                message.get("Format", ""),
-                message.get("ThumbMediaId", "")
+                message.get("msg_id", ""),
+                message.get("create_time", ""),
+                message.get("create_time_formatted", ""),
+                message.get("msg_type", ""),
+                message.get("from_user_name", ""),
+                message.get("to_user_name", ""),
+                message.get("content", ""),
+                message.get("pic_url", ""),
+                message.get("media_id", ""),
+                message.get("format", ""),
+                message.get("thumb_media_id", "")
             ]
 
             sheet.append(row_data)
