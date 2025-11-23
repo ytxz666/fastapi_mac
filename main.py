@@ -33,7 +33,7 @@ def read_root(request: Request):
 from services.message_service import MessageService
 
 # 微信消息接收端点
-@app.post("/wechat", response_class=HTMLResponse)
+@app.post("/wechat")
 async def handle_wechat_message(request: Request):
     # 读取请求体中的XML数据
     xml_data = await request.body()
