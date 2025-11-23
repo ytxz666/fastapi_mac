@@ -22,10 +22,8 @@ venv/
 *.bak
 
 # Virtual Environment
-.env
 .venv
 venv/
-env/
 
 # Pytest
 .pytest_cache/
