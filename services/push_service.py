@@ -1,9 +1,13 @@
 import requests
 import os
+import warnings
 from dotenv import load_dotenv
 
 # 加载环境变量
 load_dotenv()
+
+# 忽略SSL证书验证警告（仅用于开发环境）
+warnings.filterwarnings('ignore', message='Unverified HTTPS request')
 
 class PushService:
     def __init__(self):
@@ -30,7 +34,8 @@ class PushService:
         }
 
         try:
-            response = requests.post(url, json=payload)
+            # 添加verify=False参数来禁用SSL证书验证（仅用于开发环境）
+            response = requests.post(url, json=payload, verify=False)
             result = response.json()
 
             if result.get("errcode") == 0:
