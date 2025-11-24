@@ -58,7 +58,7 @@ async def handle_wechat_message(request: Request):
                 # 构建回复XML
                 to_user=message["from_user_name"]
                 from_user=message["to_user_name"]
-                content="感谢您的留言！我们会尽快回复您。"  # 可自定义回复内容
+                content="您的消息已收到，谢谢！"  # 可自定义回复内容
                 create_time = int(time.time())
                 reply_xml = f"""
                 <xml>
